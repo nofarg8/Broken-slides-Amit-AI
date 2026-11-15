@@ -514,7 +514,7 @@ function goSlide(i){
   if (i < 0 || i > 6) return;
   S.slide = i; S.visited.add(i);
   renderSlide();
-  if (S.stage === 0){ renderIntro(); updateBar(); }
+  checkIntro();
   /* שאלה שכבר נענתה לא נשארת על המסך כשעוברים שקף */
   if (S.stage === 1 && S.q && S.q.done && !S.allOpen) contSearch();
 }
@@ -538,17 +538,24 @@ function renderIntro(warn){
     '<ul class="status">' +
     '<li class="' + (S.procOpened ? 'done' : '') + '">נוהל הפרסום: ' + (S.procOpened ? 'נקרא' : 'עוד לא נפתח') + '</li>' +
     '<li class="' + (S.visited.size === 7 ? 'done' : '') + '">שקפים שעברתם עליהם: ' + S.visited.size + ' מתוך 7</li></ul>' +
-    (warn ? '<p class="note warnn">קודם קראו את נוהל הפרסום ועברו על כל השקפים. בלי לדעת מה אמור להופיע במצגת, אי אפשר לדעת מה לא בסדר.</p>' : '') +
-    '<button class="btn' + (introReady() ? '' : ' locked') + '" type="button" data-act="ready">אנחנו מוכנים לבדוק</button>');
+    (warn ? '<p class="note warnn">קודם קראו את נוהל הפרסום ועברו על כל השקפים. בלי לדעת מה אמור להופיע במצגת, אי אפשר לדעת מה לא בסדר.</p>'
+          : '<p>אחרי שתסיימו את שניהם, תוכלו להתחיל לחפש תקלות.</p>'));
+}
+/* החיפוש מתחיל מעצמו כשהנוהל נקרא וכל השקפים נצפו */
+function checkIntro(){
+  if (S.stage !== 0) return;
+  if (introReady()) startSearch(); else { renderIntro(); updateBar(); }
 }
 function startSearch(){
   S.stage = 1;
   showStage(); renderSlide();
-  say('<p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר. אפשר לדפדף בין השקפים ולפתוח את הנוהל בכל רגע.</p>');
+  say('<p class="note okn">קראתם את הנוהל ועברתם על כל השקפים. עכשיו אפשר לחפש תקלות.</p><p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר. אפשר לדפדף בין השקפים ולפתוח את הנוהל בכל רגע.</p>');
 }
 
 /* ===== שלב 1 ===== */
 function zoneClick(z){
+  /* לפני תחילת החיפוש: לחיצה על השקף מסבירה מה חסר כדי להתחיל */
+  if (S.stage === 0){ snd('bad'); renderIntro(true); if (isMobile()) $('fb').scrollIntoView({block:'nearest'}); return; }
   if (S.stage !== 1 || S.allOpen || S.reveal) return;
   if (S.q && !S.q.done){
     /* שאלה פתוחה: חוזרים לשקף שלה ומזכירים לענות קודם */
@@ -691,14 +698,18 @@ function drawLinks(){
   svg.innerHTML = out;
 }
 function pickFault(f){
-  if (S.matched[f]) return;
+  if (isSolved(f)){ say('<p>את התקלה הזו לא מצאתם, ולכן היא כבר מחוברת לשורה שלה. בחרו תקלה שלא מסומנת באפור.</p>', true); return; }
+  if (S.matched[f]){ say('<p>את התקלה הזו כבר התאמתם. בחרו תקלה אחרת.</p>', true); return; }
   S.sel = f;
   renderMatch();
   say('<p>עכשיו לחצו על השורה שהייתה חסרה בפרומפט של רובי.</p>');
   if (isMobile()) $('lines').scrollIntoView({block:'nearest'});
 }
 function pickLine(id){
-  if (ORDER.some(f => S.matched[f] && FAULTS[f].line === id)) return;
+  if (ORDER.some(f => S.matched[f] && FAULTS[f].line === id)){
+    if (count(S.matched) < 7) say('<p>השורה הזו כבר מחוברת לתקלה. בחרו שורה אחרת.</p>', true);
+    return;
+  }
   if (!S.sel){ say('<p>קודם בחרו תקלה מהרשימה.</p>', true); return; }
   const f = S.sel, F = FAULTS[f];
   if (F.line === id){ doMatch(f, '<b>נכון.</b> ', 'okn'); snd('ok'); return; }
@@ -735,7 +746,7 @@ function openModal(k){
   $('modalBody').innerHTML = MODALS[k];
   $('modal').hidden = false;
   $('modalClose').focus();
-  if (k === 'proc' && !S.procOpened){ S.procOpened = true; if (S.stage === 0) renderIntro(); }
+  if (k === 'proc' && !S.procOpened){ S.procOpened = true; checkIntro(); }
 }
 function closeModal(){ $('modal').hidden = true; }
 
@@ -767,8 +778,7 @@ function fbClick(e){
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const a = b.dataset.act;
-  if (a === 'ready'){ if (introReady()) startSearch(); else { snd('bad'); renderIntro(true); } }
-  else if (a === 'opt') answer(+b.dataset.i);
+  if (a === 'opt') answer(+b.dataset.i);
   else if (a === 'cont') contSearch();
   else if (a === 'next') goNext();
   else if (a === 'rev') showRevealed(b.dataset.f);
