@@ -117,6 +117,12 @@ p{margin:0 0 8px}
 .row .ic{flex:none;width:16px;height:16px;margin-top:1px}
 .row.open{background:var(--ok-soft);color:var(--text);animation:fade .4s}
 .row.open .ic{color:var(--ok)}
+.tag{flex:none;margin-inline-start:auto;font-size:11px;font-weight:bold;border-radius:99px;padding:0 8px;background:var(--ok);color:var(--card);white-space:nowrap}
+.row.open.rev{background:var(--card);color:var(--muted);outline:1.5px dashed var(--muted);outline-offset:-1.5px}
+.row.open.rev .ic{color:var(--muted)}
+.row.open.rev .tag{background:var(--warn-soft);color:var(--text);outline:1px dashed var(--warn)}
+.rev-item{display:block;width:100%;margin-bottom:4px;padding:3px 8px;font-size:12.5px;line-height:1.35;border:1.5px dashed var(--warn);border-radius:8px;background:var(--warn-soft)}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .docs{flex:none;display:flex;gap:8px}
 .docs .btn{flex:1;padding:8px 6px;font-size:13px}
 
@@ -138,13 +144,19 @@ p{margin:0 0 8px}
 .line{flex:none;display:block;width:100%;padding:6px 10px;border:2px solid transparent;border-radius:8px;background:var(--card);font-size:12.5px}
 .line b{display:block;font-size:14px;color:var(--slide-title)}
 .line.used{border-color:var(--ok);background:var(--ok-soft);cursor:default}
-.faults{flex:none;display:flex;flex-direction:column;gap:5px}
+.faults{flex:0 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:5px}
+.faults .fault{flex:none}
 .fault{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:2px solid transparent;border-radius:8px;background:var(--card);font-size:13px}
 .fault.sel{border-color:var(--accent);background:var(--accent-soft)}
 .fault.matched{border-color:var(--ok);background:var(--ok-soft);cursor:default}
 .chip{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--warn);color:var(--bg);font-weight:bold;font-size:12px}
 .matched .chip,.used .chip{background:var(--ok);color:var(--card)}
 .line .chip{float:left}
+.fault.solved,.line.solved{border:2px dashed var(--muted);background:var(--locked);color:var(--muted)}
+.solved .chip{background:var(--muted);color:var(--card)}
+.line.solved b{color:var(--muted)}
+.why{display:block;font-size:11.5px;margin-top:2px}
+#links line.solved{stroke:var(--muted);stroke-dasharray:5 6}
 .pane-title{color:var(--on-bg);margin:0}
 
 /* ===== שלב 3 ===== */
@@ -163,7 +175,9 @@ p{margin:0 0 8px}
   body{overflow:auto}
   .app{height:auto;min-height:100vh}
   .topbar{position:sticky;top:0;z-index:5}
-  .guide{font-size:13.5px}
+  .guide{font-size:12.5px}
+  .counter{white-space:normal;max-width:44%;border-radius:12px;font-size:12px;text-align:center}
+  .faults{flex:none;overflow:visible}
   .main{display:flex;flex-direction:column}
   #s2{gap:12px}
   #s2 .pane:nth-child(2){order:-1}
@@ -351,9 +365,9 @@ const LINES = [
 
 const GUIDES = [
   'לפני שבודקים, קראו את נוהל הפרסום ועברו על כל 7 השקפים.',
-  'במצגת של רובי מסתתרות 7 תקלות. לחצו על המקום המדויק בשקף שבו משהו לא בסדר.',
-  'לכל תקלה, מצאו את השורה שהייתה חסרה בפרומפט של רובי.',
-  'סיימתם. מצאתם את כל התקלות ואת המקור של כל אחת.'
+  'במצגת של רובי מסתתרות 7 תקלות. מצאו לפחות 3. לחצו על המקום המדויק בשקף שבו משהו לא בסדר.',
+  'לכל תקלה שמצאתם, מצאו את השורה שהייתה חסרה בפרומפט של רובי.',
+  'סיימתם. עכשיו אתם יודעים מה בודקים במצגת, ומאיפה מגיעות התקלות.'
 ];
 
 /* ===== גרפיקה ===== */
@@ -420,6 +434,7 @@ let S, muted = false, actx = null;
 function newState(){
   return {stage:0, slide:0, visited:new Set([0]), procOpened:false,
     found:{}, opened:{}, misses:0, q:null, allOpen:false,
+    reveal:false, revealed:{}, shown:{},
     sel:null, matched:{}, mErr:{}};
 }
 const count = o => ORDER.filter(f => o[f]).length;
@@ -454,8 +469,17 @@ function renderMute(){
 
 /* ===== תצוגה כללית ===== */
 function fb(){ return S.stage === 2 ? $('fb2') : $('fb'); }
+const MIN_FOUND = 3;
+/* אפשר להמשיך לשלב הבא: נמצאו לפחות 3, ואין שאלה פתוחה */
+function canProceed(){
+  return S.stage === 1 && !S.reveal && !S.allOpen && count(S.opened) >= MIN_FOUND && !(S.q && !S.q.done);
+}
+/* תקלות שהתלמידים מתאימים להן שורה בשלב 2: מה שמצאו בעצמם, ותמיד F7 */
+const needsMatch = f => !S.revealed[f] || f === 'F7';
+const NEXT_BTN = '<button class="btn" type="button" data-act="next">ממשיכים לשלב הבא</button>';
 function say(html, scroll){
   const el = fb();
+  if (canProceed() && html.indexOf('data-act="next"') < 0) html += '<div class="btn-row">' + NEXT_BTN + '</div>';
   el.innerHTML = '<div>' + html + '</div>';
   el.scrollTop = 0;
   if (scroll && isMobile()) el.scrollIntoView({block:'nearest'});
@@ -465,14 +489,17 @@ function updateBar(){
   const c = $('counter');
   c.hidden = S.stage === 3;
   if (S.stage === 0) c.textContent = 'שקפים: ' + S.visited.size + ' מתוך 7';
-  if (S.stage === 1) c.textContent = 'נמצאו ' + count(S.found) + ' מתוך 7';
-  if (S.stage === 2) c.textContent = 'הותאמו ' + count(S.matched) + ' מתוך 7';
+  if (S.stage === 1) c.textContent = 'נמצאו ' + count(S.found) + ' מתוך 7 (כדי להמשיך: לפחות ' + MIN_FOUND + ')';
+  if (S.stage === 2){
+    const need = ORDER.filter(needsMatch);
+    c.textContent = 'הותאמו ' + need.filter(f => S.matched[f]).length + ' מתוך ' + need.length;
+  }
 }
 function showStage(){
   $('s01').hidden = S.stage > 1;
   $('s2').hidden = S.stage !== 2;
   $('s3').hidden = S.stage !== 3;
-  app.classList.toggle('st1', S.stage === 1);
+  app.classList.toggle('st1', S.stage === 1 && !S.reveal);
   updateBar();
 }
 
@@ -480,8 +507,8 @@ function showStage(){
 function renderSlide(){
   slideEl.innerHTML = slideHTML(S.slide);
   slideEl.querySelectorAll('.zone').forEach(z => {
-    if (S.found[z.dataset.z]) z.classList.add('found');
-    if (S.stage === 1){ z.tabIndex = 0; z.setAttribute('role', 'button'); }
+    if (S.found[z.dataset.z] || S.shown[z.dataset.z]) z.classList.add('found');
+    if (S.stage === 1 && !S.reveal){ z.tabIndex = 0; z.setAttribute('role', 'button'); }
   });
   $('thumbs').querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('cur', i === S.slide));
   $('prev').disabled = S.slide === 0;
@@ -499,9 +526,16 @@ function goSlide(i){
   /* שאלה שכבר נענתה לא נשארת על המסך כשעוברים שקף */
   if (S.stage === 1 && S.q && S.q.done && !S.allOpen) contSearch();
 }
+/* שורת צ'קליסט פתוחה, עם תווית: מצאתם או נחשף */
+function rowHTML(f, i){
+  const rev = S.revealed[f];
+  return '<div class="row open' + (rev ? ' rev' : '') + '">' + ICON_CHECK +
+    '<span><b>' + (i + 1) + '. ' + FAULTS[f].checkName + '</b> - ' + FAULTS[f].checkQ + '</span>' +
+    '<span class="tag">' + (rev ? 'נחשף' : 'מצאתם') + '</span></div>';
+}
 function renderChecklist(){
-  $('check').innerHTML = ORDER.map((f, i) => S.opened[f]
-    ? '<div class="row open">' + ICON_CHECK + '<span><b>' + (i + 1) + '. ' + FAULTS[f].checkName + '</b> - ' + FAULTS[f].checkQ + '</span></div>'
+  $('check').innerHTML = ORDER.map((f, i) => S.opened[f] || S.revealed[f]
+    ? rowHTML(f, i)
     : '<div class="row">' + ICON_LOCK + '<span>' + (i + 1) + '. ?</span></div>').join('');
 }
 
@@ -523,7 +557,7 @@ function startSearch(){
 
 /* ===== שלב 1 ===== */
 function zoneClick(z){
-  if (S.stage !== 1 || S.allOpen) return;
+  if (S.stage !== 1 || S.allOpen || S.reveal) return;
   if (S.q && !S.q.done){
     /* שאלה פתוחה: חוזרים לשקף שלה ומזכירים לענות קודם */
     S.q.nag = true;
@@ -565,7 +599,10 @@ function renderQ(){
     q.opts.map((o, i) => '<button class="opt' + (o.tried ? ' dim' : '') + (q.done && o.c ? ' right' : '') + '" type="button" data-act="opt" data-i="' + i + '"' +
       (o.tried || q.done ? ' disabled' : '') + '>' + o.t + '</button>').join('') +
     q.note +
-    (q.done ? '<button class="btn" type="button" data-act="cont">' + (S.allOpen ? 'ממשיכים לשלב הבא' : 'ממשיכים לחפש') + '</button>' : ''), true);
+    (!q.done ? '' :
+      S.allOpen ? '<button class="btn" type="button" data-act="cont">ממשיכים לשלב הבא</button>' :
+      canProceed() ? '<div class="btn-row">' + NEXT_BTN + '<button class="btn ghost" type="button" data-act="cont">אני רוצה למצוא עוד</button></div>' :
+      '<button class="btn" type="button" data-act="cont">ממשיכים לחפש</button>'), true);
 }
 function answer(i){
   const q = S.q;
@@ -596,21 +633,49 @@ function contSearch(){
   say('<p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר.</p>');
 }
 
+/* ===== חשיפת התקלות שלא נמצאו ===== */
+function goNext(){
+  if (!canProceed()) return;
+  S.q = null;
+  const left = ORDER.filter(f => !S.opened[f]);
+  if (!left.length){ startMatch(); return; }
+  S.reveal = true;
+  left.forEach(f => { S.revealed[f] = true; });
+  showStage(); renderSlide(); renderChecklist();
+  renderReveal();
+}
+function renderReveal(){
+  say('<p class="q-title">התקלות שלא מצאתם</p>' +
+    ORDER.filter(f => S.revealed[f]).map(f =>
+      '<button class="rev-item" type="button" data-act="rev" data-f="' + f + '"><b>שקף ' + FAULTS[f].slide + ':</b> ' + FAULTS[f].explain + '</button>').join('') +
+    '<button class="btn" type="button" data-act="tomatch">ממשיכים</button>', true);
+}
+function showRevealed(f){
+  S.shown[f] = true;
+  goSlide(FAULTS[f].slide - 1);
+  slideEl.querySelectorAll('.zone[data-z="' + f + '"]').forEach(z => z.classList.add('blink'));
+  if (isMobile()) slideEl.scrollIntoView({block:'nearest'});
+}
+
 /* ===== שלב 2 ===== */
+const isSolved = f => S.revealed[f] && f !== 'F7';
 function startMatch(){
-  S.stage = 2;
+  S.stage = 2; S.reveal = false;
+  ORDER.forEach(f => { if (isSolved(f)) S.matched[f] = true; });
   showStage();
   $('p2').textContent = PROMPT_TEXT;
   renderMatch();
-  say('<p>בחרו תקלה מהרשימה, ואחר כך לחצו על השורה שהייתה חסרה בפרומפט של רובי.</p>');
+  say('<p>בחרו תקלה מהרשימה, ואחר כך לחצו על השורה שהייתה חסרה בפרומפט של רובי.</p>' +
+    (ORDER.some(isSolved) ? '<p>התקלות שנחשפו מסומנות באפור, והן כבר מחוברות לשורה שלהן.</p>' : ''));
 }
 function renderMatch(){
   $('faults').innerHTML = ORDER.map((f, i) =>
-    '<button class="fault' + (S.matched[f] ? ' matched' : '') + (S.sel === f ? ' sel' : '') + '" type="button" data-f="' + f + '">' +
-    '<span class="chip">' + (i + 1) + '</span><span>' + FAULTS[f].short + '</span></button>').join('');
+    '<button class="fault' + (S.matched[f] ? ' matched' : '') + (isSolved(f) ? ' solved' : '') + (S.sel === f ? ' sel' : '') + '" type="button" data-f="' + f + '">' +
+    '<span class="chip">' + (i + 1) + '</span><span>' + FAULTS[f].short +
+    (isSolved(f) ? '<span class="why">' + FAULTS[f].mExplain + '</span>' : '') + '</span></button>').join('');
   $('lines').innerHTML = LINES.map(l => {
     const f = ORDER.find(x => S.matched[x] && FAULTS[x].line === l.id);
-    return '<button class="line' + (f ? ' used' : '') + '" type="button" data-l="' + l.id + '">' +
+    return '<button class="line' + (f ? ' used' : '') + (f && isSolved(f) ? ' solved' : '') + '" type="button" data-l="' + l.id + '">' +
       (f ? '<span class="chip">' + (ORDER.indexOf(f) + 1) + '</span>' : '') +
       '<b>' + l.name + '</b>' + l.ex + '</button>';
   }).join('');
@@ -628,7 +693,7 @@ function drawLinks(){
     if (!a || !c) return;
     const ra = a.getBoundingClientRect(), rc = c.getBoundingClientRect();
     if (ra.right > rc.left) return; /* בטור אחד אין קווים, רק מספר וצבע */
-    out += '<line x1="' + (ra.right - b.left) + '" y1="' + (ra.top + ra.height / 2 - b.top) +
+    out += '<line' + (isSolved(f) ? ' class="solved"' : '') + ' x1="' + (ra.right - b.left) + '" y1="' + (ra.top + ra.height / 2 - b.top) +
       '" x2="' + (rc.left - b.left) + '" y2="' + (rc.top + rc.height / 2 - b.top) + '"/>';
   });
   svg.innerHTML = out;
@@ -666,8 +731,7 @@ function doMatch(f, prefix, cls){
 function finish(){
   S.stage = 3;
   showStage();
-  $('endCheck').innerHTML = ORDER.map((f, i) =>
-    '<div class="row">' + ICON_CHECK + '<span><b>' + (i + 1) + '. ' + FAULTS[f].checkName + '</b> - ' + FAULTS[f].checkQ + '</span></div>').join('');
+  $('endCheck').innerHTML = ORDER.map(rowHTML).join('');
   $('six').innerHTML = LINES.filter(l => l.id !== 'none').map(l => '<li>' + l.name + '</li>').join('');
   $('code').textContent = COMPLETION_CODE;
   $('copy').textContent = 'העתקה';
@@ -729,6 +793,9 @@ function fbClick(e){
   if (a === 'ready'){ if (introReady()) startSearch(); else { snd('bad'); renderIntro(true); } }
   else if (a === 'opt') answer(+b.dataset.i);
   else if (a === 'cont') contSearch();
+  else if (a === 'next') goNext();
+  else if (a === 'rev') showRevealed(b.dataset.f);
+  else if (a === 'tomatch') startMatch();
   else if (a === 'end') finish();
 }
 $('fb').addEventListener('click', fbClick);
@@ -736,6 +803,7 @@ $('fb2').addEventListener('click', fbClick);
 $('faults').addEventListener('click', e => { const b = e.target.closest('.fault'); if (b) pickFault(b.dataset.f); });
 $('lines').addEventListener('click', e => { const b = e.target.closest('.line'); if (b) pickLine(b.dataset.l); });
 $('lines').addEventListener('scroll', drawLinks);
+$('faults').addEventListener('scroll', drawLinks);
 window.addEventListener('resize', drawLinks);
 $('mute').addEventListener('click', () => { muted = !muted; renderMute(); });
 $('copy').addEventListener('click', copyCode);
