@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>המצגת השבורה - פולאריס, שיעור 6</title>
+<style>
+/* ===== צבעים: להחלפה לעיצוב הקורס ===== */
+:root{
+  --bg:#0f2340;
+  --bg-soft:#1a3359;
+  --bg-line:#2c4873;
+  --card:#ffffff;
+  --text:#16263d;
+  --muted:#5b6b82;
+  --on-bg:#ffffff;
+  --on-bg-muted:#b9c7dc;
+  --line:#d9e2ee;
+  --accent:#2badde;
+  --accent-soft:#e3f4fb;
+  --ok:#3fb37f;
+  --ok-soft:#e4f5ec;
+  --warn:#f0a03c;
+  --warn-soft:#fdf1df;
+  --locked:#eef2f7;
+  --slide-bg:#ffffff;
+  --slide-a:#2badde;
+  --slide-b:#6c63d9;
+  --slide-title:#1c3c6b;
+  --slide-text:#22344d;
+  --overlay:rgba(8,18,36,.72);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:Arial,"Segoe UI",sans-serif;font-size:14px;line-height:1.45;text-align:right;overflow:hidden}
+button{font-family:inherit;font-size:inherit;color:inherit;text-align:right;cursor:pointer}
+h3{margin:0 0 6px;font-size:14px}
+p{margin:0 0 8px}
+[hidden]{display:none!important}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes blink{0%,100%{opacity:0}50%{opacity:1}}
+
+.app{height:100vh;display:flex;flex-direction:column}
+.topbar{flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-soft);border-bottom:1px solid var(--bg-line);color:var(--on-bg)}
+.guide{flex:1;font-size:15px;font-weight:bold}
+.counter{flex:none;background:var(--accent);color:var(--bg);font-weight:bold;border-radius:99px;padding:3px 12px;white-space:nowrap}
+.mute{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--bg-line);background:transparent;color:var(--on-bg);display:flex;align-items:center;justify-content:center;padding:0}
+.mute svg{width:18px;height:18px}
+
+.main{flex:1;min-height:0;display:grid;grid-template-columns:62fr 38fr;gap:12px;padding:12px;position:relative;animation:fade .3s}
+.pane{min-height:0;min-width:0;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border-radius:10px;padding:10px 12px}
+
+/* ===== מציג המצגת ===== */
+.stage{flex:1;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
+.sl{container-type:inline-size;aspect-ratio:16/9;background:var(--slide-bg);border-radius:8px;overflow:hidden;position:relative;color:var(--slide-text)}
+#slide{width:min(100cqw,calc(100cqh * 16 / 9))}
+.sl-in{position:absolute;inset:0;display:flex;flex-direction:column;padding:0 4cqw 3cqw;text-align:right;animation:fade .25s}
+.band{flex:none;height:2.2cqw;margin:0 -4cqw 2cqw;background:linear-gradient(90deg,var(--slide-a),var(--slide-b))}
+.zone{position:relative;border:.3cqw solid transparent;border-radius:1cqw;padding:.6cqw 1.2cqw;outline:none}
+.zone.found{border-color:var(--warn);background:var(--warn-soft)}
+.zone.blink::after{content:"";position:absolute;inset:-.3cqw;border:.6cqw solid var(--warn);border-radius:inherit;animation:blink .55s 2;opacity:0;pointer-events:none}
+.st1 #slide .zone{cursor:pointer}
+.st1 #slide .zone:focus-visible{border-color:var(--accent)}
+.st1 #slide .zone:active{background:var(--accent-soft)}
+@media (hover:hover){.st1 #slide .zone:hover{background:var(--accent-soft)}}
+.st1 #slide .zone.found,.st1 #slide .zone.found:hover{background:var(--warn-soft)}
+.s-title{font-size:4.4cqw;font-weight:bold;color:var(--slide-title);line-height:1.25}
+.s-center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:1cqw}
+.s-big{font-size:5.8cqw}
+.s-sub{font-size:3.2cqw;color:var(--muted)}
+.bul{font-size:2.9cqw;margin-top:1.2cqw;padding-inline-start:4.2cqw}
+.bul::before{content:"";position:absolute;inset-inline-start:1.5cqw;top:2cqw;width:1.2cqw;height:1.2cqw;border-radius:50%;background:var(--slide-a)}
+.s-text{font-size:3cqw;line-height:1.6;margin-top:1.5cqw}
+.s-list{font-size:2.9cqw;line-height:1.75;margin-top:1.5cqw}
+.s-ltr{direction:ltr;text-align:left}
+.s-row{flex:1;min-height:0;display:flex;align-items:center;justify-content:space-between;gap:2cqw}
+.s-dense{flex:none;width:47cqw;font-size:2.3cqw;line-height:1.38}
+.s-img{flex:none;width:28cqw;margin-inline-end:6cqw}
+.s-img svg,.post svg{display:block;width:100%;height:auto}
+.s-post{width:52cqw;margin:.6cqw auto 0}
+.post{border:.25cqw solid var(--line);border-radius:1.4cqw;overflow:hidden;background:var(--slide-bg)}
+.post-h{display:flex;align-items:center;gap:1.2cqw;padding:1cqw 1.4cqw;font-size:2.2cqw;font-weight:bold}
+.post-av{width:3.6cqw;height:3.6cqw;border-radius:50%;background:linear-gradient(135deg,var(--slide-a),var(--slide-b))}
+.post-c{padding:1cqw 1.4cqw 1.2cqw;font-size:2.3cqw}
+
+.strip{flex:none;display:flex;align-items:center;gap:6px}
+.nav{flex:none;width:34px;height:34px;border-radius:50%;border:0;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;padding:0}
+.nav:disabled{opacity:.35;cursor:default}
+.nav svg{width:16px;height:16px}
+.thumbs{flex:1;display:flex;gap:6px;min-width:0}
+.thumb{flex:1;min-width:0;padding:0;border:2px solid transparent;border-radius:5px;opacity:.6}
+.thumb.cur{border-color:var(--accent);opacity:1}
+.thumb .sl-in{pointer-events:none;animation:none}
+
+/* ===== צד שמאל ===== */
+.feedback{flex:1 1 0;min-height:110px;overflow:auto;font-size:13.5px}
+.feedback>div{animation:fade .25s}
+.q-title{font-weight:bold;font-size:15px}
+.q-tag{display:inline-block;font-size:12px;background:var(--warn);color:var(--bg);border-radius:99px;padding:1px 9px;margin-inline-start:4px}
+.opt{display:block;width:100%;margin-bottom:6px;padding:7px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--card)}
+.opt:disabled{cursor:default}
+.opt.dim{opacity:.35}
+.opt.right{border-color:var(--ok);background:var(--ok-soft);font-weight:bold}
+.note{border-inline-start:4px solid var(--accent);background:var(--accent-soft);border-radius:6px;padding:6px 10px;margin:4px 0 8px}
+.note.warnn{border-color:var(--warn);background:var(--warn-soft)}
+.note.okn{border-color:var(--ok);background:var(--ok-soft)}
+.btn{display:inline-block;border:0;border-radius:8px;background:var(--accent);color:var(--bg);font-weight:bold;padding:8px 14px;text-align:center}
+.btn.locked{opacity:.5}
+.btn.ghost{background:var(--bg-soft);color:var(--on-bg);border:1px solid var(--bg-line)}
+.status{list-style:none;margin:0 0 10px;padding:0}
+.status li{padding:2px 0;color:var(--muted)}
+.status li.done{color:var(--ok);font-weight:bold}
+
+.checklist{flex:0 1 auto;max-height:47%;overflow:auto}
+.row{display:flex;align-items:flex-start;gap:8px;padding:4px 8px;margin-top:4px;border-radius:6px;font-size:12.5px;background:var(--locked);color:var(--muted)}
+.row .ic{flex:none;width:16px;height:16px;margin-top:1px}
+.row.open{background:var(--ok-soft);color:var(--text);animation:fade .4s}
+.row.open .ic{color:var(--ok)}
+.docs{flex:none;display:flex;gap:8px}
+.docs .btn{flex:1;padding:8px 6px;font-size:13px}
+
+/* ===== חלונית ===== */
+.modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;padding:14px;z-index:10;animation:fade .2s}
+.modal-box{background:var(--card);border-radius:12px;padding:16px 18px;max-width:520px;width:100%;max-height:100%;overflow:auto}
+.modal-box h2{margin:0 0 8px;font-size:18px;color:var(--slide-title)}
+.modal-box ol,.modal-box ul{margin:4px 0 10px;padding-inline-start:22px}
+.modal-box li{margin-bottom:3px}
+.quote{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:16px}
+
+/* ===== שלב 2 ===== */
+#s2{gap:30px}
+#links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#links line{stroke:var(--ok);stroke-width:3;stroke-linecap:round}
+.p-card h3{color:var(--slide-title)}
+.p-card p{margin:0;font-size:15px}
+.lines{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.line{flex:none;display:block;width:100%;padding:6px 10px;border:2px solid transparent;border-radius:8px;background:var(--card);font-size:12.5px}
+.line b{display:block;font-size:14px;color:var(--slide-title)}
+.line.used{border-color:var(--ok);background:var(--ok-soft);cursor:default}
+.faults{flex:none;display:flex;flex-direction:column;gap:5px}
+.fault{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:2px solid transparent;border-radius:8px;background:var(--card);font-size:13px}
+.fault.sel{border-color:var(--accent);background:var(--accent-soft)}
+.fault.matched{border-color:var(--ok);background:var(--ok-soft);cursor:default}
+.chip{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--warn);color:var(--bg);font-weight:bold;font-size:12px}
+.matched .chip,.used .chip{background:var(--ok);color:var(--card)}
+.line .chip{float:left}
+.pane-title{color:var(--on-bg);margin:0}
+
+/* ===== שלב 3 ===== */
+#s3{display:block;overflow:auto}
+.end-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.end-grid .row{background:var(--ok-soft);color:var(--text)}
+.end-grid .row .ic{color:var(--ok)}
+.six{margin:0;padding:0;list-style:none}
+.six li{background:var(--accent-soft);border-radius:6px;padding:6px 10px;margin-top:5px;font-weight:bold;color:var(--slide-title)}
+.sum{color:var(--on-bg);font-weight:bold;font-size:17px;text-align:center;margin:12px 0 8px}
+.code-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;text-align:center}
+.code{font-size:30px;font-weight:bold;color:var(--slide-title);background:var(--accent-soft);border:2px dashed var(--accent);border-radius:10px;padding:4px 18px;user-select:all;-webkit-user-select:all}
+.end-foot{text-align:center;margin-top:10px}
+
+@media (max-width:759px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:5}
+  .guide{font-size:13.5px}
+  .main{display:flex;flex-direction:column}
+  #s2{gap:12px}
+  #s2 .pane:nth-child(2){order:-1}
+  .stage{container-type:inline-size;flex:none;display:block}
+  #slide{width:100%}
+  .feedback{flex:none;overflow:visible}
+  .checklist{max-height:none;overflow:visible}
+  .lines{flex:none;overflow:visible}
+  .end-grid{grid-template-columns:1fr}
+  .nav{width:30px;height:30px}
+  .thumbs{gap:3px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="guide" id="guide" aria-live="polite"></div>
+    <div class="counter" id="counter"></div>
+    <button class="mute" id="mute" type="button" aria-label="השתקת צלילים"></button>
+  </header>
+
+  <section class="main" id="s01">
+    <div class="pane">
+      <div class="stage"><div class="sl" id="slide"></div></div>
+      <div class="strip">
+        <button class="nav" id="prev" type="button" aria-label="השקף הקודם"><svg viewBox="0 0 16 16"><path d="M5 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="thumbs" id="thumbs"></div>
+        <button class="nav" id="next" type="button" aria-label="השקף הבא"><svg viewBox="0 0 16 16"><path d="M11 2L5 8l6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    </div>
+    <div class="pane">
+      <div class="card feedback" id="fb" aria-live="polite"></div>
+      <div class="card checklist">
+        <h3>צ'קליסט הבדיקה</h3>
+        <div id="check"></div>
+      </div>
+      <div class="docs">
+        <button class="btn ghost" type="button" data-modal="proc">נוהל הפרסום של פולאריס</button>
+        <button class="btn ghost" type="button" data-modal="prompt">הפרומפט של רובי</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="main" id="s2" hidden>
+    <div class="pane">
+      <div class="card p-card"><h3>הפרומפט של רובי</h3><p id="p2"></p></div>
+      <div class="lines" id="lines"></div>
+    </div>
+    <div class="pane">
+      <h3 class="pane-title">התקלות שנמצאו</h3>
+      <div class="faults" id="faults"></div>
+      <div class="card feedback" id="fb2" aria-live="polite"></div>
+    </div>
+    <svg id="links" aria-hidden="true"></svg>
+  </section>
+
+  <section class="main" id="s3" hidden>
+    <div class="end-grid">
+      <div class="card"><h3>צ'קליסט הבדיקה</h3><div id="endCheck"></div></div>
+      <div class="card"><h3>שש השורות של הנחיה למצגת</h3><ul class="six" id="six"></ul></div>
+    </div>
+    <p class="sum">שש מתוך שבע התקלות נבעו מהפרומפט. את השביעית רק אדם יכול לעצור.</p>
+    <div class="card code-box">
+      <span>קוד הסיום שלכם:</span>
+      <span class="code" id="code" dir="rtl"></span>
+      <button class="btn" id="copy" type="button">העתקה</button>
+      <div style="flex-basis:100%">העתיקו את הקוד לשאלה שמתחת לסימולציה.</div>
+    </div>
+    <div class="end-foot"><button class="btn ghost" id="restart" type="button">להתחיל מחדש</button></div>
+  </section>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div id="modalBody"></div>
+    <button class="btn" id="modalClose" type="button">סגירה</button>
+  </div>
+</div>
+
+<script>
+const COMPLETION_CODE = 'בודק-פולאריס';
+
+const PROMPT_TEXT = 'תכין מצגת על איך מעלים פוסט לעמוד של פולאריס, בשביל המתלמדים החדשים.';
+
+const MODALS = {
+  proc: '<h2>נוהל הפרסום של פולאריס</h2>' +
+    '<ol><li>כותבים טקסט קצר, עד שלוש שורות.</li>' +
+    '<li>בוחרים תמונה שמתאימה לתוכן.</li>' +
+    '<li>בודקים את הפוסט בארבע השאלות המסננות: האם זה חוקי? האם זה מבייש את האחר? האם זה מתאים לי? האם זה נועד לעשות טוב?</li>' +
+    '<li>שולחים לאישור צוות התוכן.</li>' +
+    '<li>רק אחרי האישור מפרסמים.</li></ol>' +
+    '<p><b>כללים נוספים:</b></p>' +
+    '<ul><li>לא מעלים תמונה של אדם בלי רשותו.</li>' +
+    '<li>לא מתייגים מיקום. המפקדה סודית.</li>' +
+    '<li>תמונה שנוצרה בבינה מלאכותית מסמנים: "נוצר בעזרת בינה מלאכותית".</li></ul>',
+  prompt: '<h2>הפרומפט של רובי</h2><p class="quote">' + PROMPT_TEXT + '</p>'
+};
+
+const ORDER = ['F1','F2','F3','F4','F5','F6','F7'];
+
+/* באפשרויות: הראשונה תמיד הנכונה. הממשק מערבב. */
+const FAULTS = {
+  F1:{slide:2,
+    searchHint:'השוו את מה שכתוב בשקפים לנוהל הפרסום. יש משפט שהנוהל אומר בדיוק את ההפך ממנו.',
+    options:['המשפט סותר את נוהל הפרסום','המשפט ארוך מדי בשביל שקף','המשפט כתוב בשפה קשה מדי'],
+    qHint:'פתחו את נוהל הפרסום והשוו.',
+    explain:'בנוהל כתוב שמפרסמים רק אחרי אישור צוות התוכן. הבינה כתבה משהו שסותר את המידע.',
+    checkName:'נכונות', checkQ:'התוכן תואם למידע שנתתי?',
+    short:'שקף 2: "אפשר לפרסם מיד, בלי לחכות לאישור"',
+    line:'info',
+    mHint:'מאיפה הבינה הייתה אמורה לדעת שצריך אישור?',
+    mExplain:'רובי לא צירף לבינה את נוהל הפרסום, אז היא השלימה לבד והמציאה כלל.'},
+  F2:{slide:3,
+    searchHint:'חשבו מה המתלמדים צריכים לדעת לעשות אחרי המצגת. יש שקף שלא מקדם אותם לשם.',
+    options:['השקף לא מלמד איך מעלים פוסט','יש בשקף מידע שסותר את הנוהל','השקף כתוב בשפה שקשה להבין'],
+    qHint:'מה המתלמדים צריכים לדעת לעשות אחרי המצגת?',
+    explain:'השקף נכון ונעים לקריאה, אבל הוא לא משרת את המטרה: ללמד את נוהל הפרסום.',
+    checkName:'התאמה למטרה', checkQ:'אחרי המצגת, הצופים יודעים את מה שהם צריכים לדעת?',
+    short:'שקף 3: שקף שלם על רשתות חברתיות באופן כללי',
+    line:'goal',
+    mHint:'רובי כתב לבינה על מה המצגת. האם הוא כתב גם בשביל מה?',
+    mExplain:'רובי כתב רק נושא. בלי מטרה, הבינה כתבה על רשתות חברתיות באופן כללי.'},
+  F3:{slide:4,
+    searchHint:'קראו את שלבי הפרסום לפי הסדר, ודמיינו שאתם מבצעים אותם.',
+    options:['השלבים בסדר לא נכון','חסר אחד מהשלבים שבנוהל','יש בשקף יותר מדי שלבים'],
+    qHint:'מה יקרה אם מבצעים את השלבים בדיוק לפי הסדר בשקף?',
+    explain:'לפי השקף מפרסמים בשלב הראשון ושולחים לאישור רק בסוף. בנוהל הסדר הפוך.',
+    checkName:'מבנה', checkQ:'הסדר הגיוני? יש פתיחה וסיום? כל שקף עוסק ברעיון אחד?',
+    short:'שקף 4: שלבי הפרסום בסדר לא נכון',
+    line:'structure',
+    mHint:'באיזה שלב אפשר היה לתפוס סדר שגוי, עוד לפני שיש מצגת?',
+    mExplain:'אילו רובי היה מבקש קודם רק מבנה, הוא היה רואה שהשלבים הפוכים ומתקן לפני שנבנתה מצגת.'},
+  F4:{slide:5,
+    searchHint:'דמיינו שהמצגת מוקרנת ואתם יושבים בשורה האחרונה.',
+    options:['יש יותר מדי טקסט בשקף','הטקסט לא קשור לנושא השקף','יש בטקסט מידע לא נכון'],
+    qHint:'נסו לקרוא את השקף בחמש שניות.',
+    explain:'התוכן בסדר, אבל עשר שורות בשקף אחד אי אפשר לקרוא בהקרנה.',
+    checkName:'קריאות', checkQ:'לא יותר מדי טקסט? אפשר לקרוא מרחוק?',
+    short:'שקף 5: יותר מדי טקסט בשקף אחד',
+    line:'amount',
+    mHint:'רובי ביקש מצגת. הוא אמר כמה טקסט יהיה בכל שקף?',
+    mExplain:'בלי הגבלה, הבינה כתבה כמה שרצתה.'},
+  F5:{slide:5,
+    searchHint:'הסתכלו על התמונות ועל הכיוון של הטקסט.',
+    options:['התמונה לא מתאימה והכותרת מיושרת לשמאל','התמונה קטנה מדי והכותרת ארוכה מדי','התמונה מטושטשת והכותרת בצבע לא קריא'],
+    qHint:'הסתכלו על התמונה ועל הצד שבו מתחילה הכותרת.',
+    explain:'פיצה לא קשורה לפרסום בפולאריס, והכותרת העברית מיושרת לשמאל, עם נקודה בתחילת השורה.',
+    checkName:'תמונות ועיצוב', checkQ:'כל תמונה מתאימה לתוכן? העברית מיושרת מימין לשמאל?',
+    short:'שקף 5: תמונה לא מתאימה וכותרת מיושרת לשמאל',
+    line:'design',
+    mHint:'מה רובי לא ביקש על כיוון הטקסט ועל התמונות?',
+    mExplain:'הבינה לא קיבלה שום הנחיה על כיוון הטקסט ועל התאמת התמונות.'},
+  F6:{slide:6,
+    searchHint:'קראו את השקפים כאילו זה היום הראשון שלכם בפולאריס. יש מילים שלא הייתם מבינים?',
+    options:['הטיפ כתוב במילים שמתלמדים חדשים לא מכירים','הטיפ סותר את מה שכתוב בנוהל הפרסום','הטיפ ארוך מדי, ואי אפשר לקרוא אותו מרחוק'],
+    qHint:'קראו את הטיפ כאילו זה היום הראשון שלכם.',
+    explain:'אנגייג\'מנט, CTA ואלגוריתם הפיד הם מונחים של אנשי שיווק. מתלמד חדש לא יבין מה לעשות.',
+    checkName:'התאמה לקהל', checkQ:'הקהל מכיר את המילים? הדוגמאות מהעולם שלו?',
+    short:'שקף 6: מילים שהמתלמדים החדשים לא מכירים',
+    line:'audience',
+    mHint:'רובי כתב "המתלמדים החדשים". מה הבינה לא ידעה עליהם?',
+    mExplain:'"מתלמדים חדשים" זה לא מספיק. הבינה לא ידעה מה הם כבר מכירים.'},
+  F7:{slide:7,
+    searchHint:'דמיינו שאתם האדם שמופיע בפוסט.',
+    options:['הפוסט מבייש את נדב, והתמונה עלתה בלי רשותו','הפוסט לא מצחיק, והכיתוב שלו ארוך מדי','הפוסט לא ברור, וחסר בו תיוג של המיקום'],
+    qHint:'איך הייתם מרגישים אילו זה הייתם אתם?',
+    explain:'פוסט שלועג לאדם ומשתמש בתמונה שלו בלי רשות נכשל בשאלה "האם זה מבייש את האחר?", וגם סותר את נוהל הפרסום.',
+    checkName:'ארבע השאלות המסננות', checkQ:'חוקי? מבייש את האחר? מתאים לי? נועד לעשות טוב?',
+    short:'שקף 7: פוסט שלועג לנדב',
+    line:'none',
+    mHint:'האם יש הנחיה שהייתה גורמת לבינה לא לטעות כאן, או שזו החלטה של מי שמפרסם?',
+    mExplain:'ההחלטה מה ראוי לפרסם היא של האדם. את זה בודקים בארבע השאלות המסננות ועוצרים לפני שמפרסמים.'}
+};
+
+const LINES = [
+  {id:'goal', name:'נושא ומטרה', ex:'מצגת על נוהל הפרסום בעמוד של פולאריס, כדי שהמתלמדים יידעו את חמשת השלבים ויפרסמו בלי טעויות.'},
+  {id:'audience', name:'קהל יעד', ex:'קהל היעד: מתלמדים חדשים בכיתות ח\'-ט\'. הם משתמשים ברשתות חברתיות, אבל לא מכירים מונחים מקצועיים של שיווק.'},
+  {id:'structure', name:'מבנה', ex:'בנה קודם רק מבנה: כותרת לכל שקף לפי סדר השלבים בנוהל. עדיין אל תבנה את המצגת.'},
+  {id:'info', name:'מידע', ex:'השתמש רק במידע שבנוהל המצורף. אם חסר מידע, כתוב [חסר מידע].'},
+  {id:'amount', name:'כמות טקסט', ex:'בכל שקף כותרת קצרה ועד 3 נקודות קצרות.'},
+  {id:'design', name:'עיצוב ושפה', ex:'בעברית מימין לשמאל. תמונה אחת בכל שקף, שמתאימה לתוכן שלו.'},
+  {id:'none', name:'אף שורה', ex:'אף שורה בפרומפט לא הייתה מונעת את זה. את זה בודקים ועוצרים בעצמנו.'}
+];
+
+const GUIDES = [
+  'לפני שבודקים, קראו את נוהל הפרסום ועברו על כל 7 השקפים.',
+  'במצגת של רובי מסתתרות 7 תקלות. לחצו על המקום המדויק בשקף שבו משהו לא בסדר.',
+  'לכל תקלה, מצאו את השורה שהייתה חסרה בפרומפט של רובי.',
+  'סיימתם. מצאתם את כל התקלות ואת המקור של כל אחת.'
+];
+
+/* ===== גרפיקה ===== */
+const SVG_PIZZA = '<svg viewBox="0 0 120 120" role="img" aria-label="משולש פיצה">' +
+  '<path d="M60 114L13 24Q60 4 107 24Z" fill="#f6c453"/>' +
+  '<path d="M13 24Q60 4 107 24L102 34Q60 16 18 34Z" fill="#c98a3c"/>' +
+  '<circle cx="47" cy="50" r="8" fill="#d9483b"/><circle cx="74" cy="54" r="7" fill="#d9483b"/><circle cx="60" cy="82" r="7" fill="#d9483b"/>' +
+  '<circle cx="62" cy="38" r="3" fill="#5a8f3c"/><circle cx="49" cy="70" r="3" fill="#5a8f3c"/><circle cx="72" cy="72" r="3" fill="#5a8f3c"/></svg>';
+
+const SVG_SLEEP = '<svg viewBox="0 0 240 104" role="img" aria-label="נער ישן עם הראש על המקלדת">' +
+  '<rect width="240" height="104" fill="#e3eefb"/>' +
+  '<rect x="158" y="18" width="62" height="44" rx="4" fill="#27384f"/><rect x="163" y="23" width="52" height="34" rx="2" fill="#7fd0f0"/>' +
+  '<rect x="184" y="62" width="10" height="16" fill="#27384f"/>' +
+  '<path d="M18 104V74Q18 54 44 54H78Q96 54 98 72V104Z" fill="#2badde"/>' +
+  '<rect x="78" y="74" width="74" height="9" rx="3" fill="#8a94a6"/>' +
+  '<ellipse cx="110" cy="62" rx="25" ry="18" fill="#f2c9a0"/>' +
+  '<path d="M86 58Q88 38 112 42Q134 44 135 58Q118 50 86 58Z" fill="#4a3426"/>' +
+  '<path d="M112 64q6 4 12 0" fill="none" stroke="#4a3426" stroke-width="2" stroke-linecap="round"/>' +
+  '<rect x="48" y="78" width="72" height="13" rx="6.5" fill="#f2c9a0"/>' +
+  '<rect y="84" width="240" height="20" fill="#b98b5e"/>' +
+  '<text x="114" y="32" font-family="Arial,sans-serif" font-weight="bold" font-size="20" fill="#6c63d9" direction="ltr">Zzz</text></svg>';
+
+const ICON_LOCK = '<svg class="ic" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 016 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+const ICON_CHECK = '<svg class="ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M4.5 8.2l2.4 2.4 4.6-5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_SOUND = '<svg viewBox="0 0 18 18"><path d="M2 7v4h3l4 3V4L5 7z" fill="currentColor"/><path d="M12 6q2 3 0 6M14.2 4q3.4 5 0 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const ICON_MUTED = '<svg viewBox="0 0 18 18"><path d="M2 7v4h3l4 3V4L5 7z" fill="currentColor"/><path d="M12 6.5l4 5M16 6.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+/* ===== שקפים. data-z: קוד תקלה או ok ===== */
+function zone(z, cls, html, attrs){
+  return '<div class="zone ' + cls + '" data-z="' + z + '"' + (attrs || '') + '>' + html + '</div>';
+}
+const SLIDES = [
+  () => '<div class="s-center">' +
+    zone('ok','s-title s-big','מעלים פוסט לעמוד של פולאריס') +
+    zone('ok','s-sub','מצגת למתלמדים החדשים') + '</div>',
+  () => zone('ok','s-title','מי מפרסם בעמוד?') +
+    zone('F1','bul','כל מתלמד יכול לפרסם מיד, בלי לחכות לאישור') +
+    zone('ok','bul','הפוסטים מספרים על הפעילות של פולאריס') +
+    zone('ok','bul','כל פוסט כולל טקסט ותמונה'),
+  () => zone('F2','s-title','למה כולם אוהבים רשתות חברתיות?') +
+    zone('F2','s-text','רשתות חברתיות מחברות בין אנשים מכל העולם. הן מאפשרות לשתף רגעים, לגלות תחביבים חדשים ולהישאר בקשר עם חברים. יש בהן גם מקום ליצירה, להומור ולהשראה.'),
+  () => zone('ok','s-title','שלבי הפרסום') +
+    zone('F3','s-list','<div>1. לוחצים על "פרסם"</div><div>2. בוחרים תמונה</div><div>3. כותבים טקסט קצר</div><div>4. בודקים בארבע השאלות המסננות</div><div>5. שולחים לאישור צוות התוכן</div>'),
+  () => zone('F5','s-title s-ltr','בוחרים תמונה וכותבים טקסט.',' dir="ltr"') +
+    '<div class="s-row">' +
+    zone('F4','s-dense','כדי לכתוב טקסט טוב לפוסט, חשוב לחשוב קודם על מה רוצים להגיד. כדאי לפתוח במשפט שמושך תשומת לב. אחר כך מספרים מה קרה ומתי. משתמשים במילים פשוטות וברורות. לא כותבים משפטים ארוכים מדי. בודקים שאין שגיאות כתיב. אפשר להוסיף אימוג\'י אחד או שניים, אבל לא יותר. כדאי לסיים בשאלה או בהזמנה לתגובה. קוראים את הטקסט שוב לפני ששולחים. ואם יש ספק, מבקשים מחבר לקרוא.') +
+    zone('F5','s-img',SVG_PIZZA) + '</div>',
+  () => zone('ok','s-title','טיפים מתקדמים') +
+    zone('F6','bul','כדי להגדיל את האנגייג\'מנט, הוסיפו CTA ותזמנו את הפוסט לפי האלגוריתם של הפיד') +
+    zone('ok','bul','תמונה שנוצרה בבינה מלאכותית מסמנים: נוצר בעזרת בינה מלאכותית'),
+  () => zone('ok','s-title','דוגמה לפוסט מצחיק') +
+    zone('F7','s-post','<div class="post"><div class="post-h"><span class="post-av"></span><span>פולאריס</span></div>' + SVG_SLEEP +
+      '<div class="post-c">נדב שוב נרדם באמצע השיעור 😂😂 מי עוד חושב שהכיתה היא המיטה שלו?</div></div>')
+];
+function slideHTML(i){
+  return '<div class="sl-in"><div class="band"></div>' + SLIDES[i]() + '</div>';
+}
+
+/* ===== מצב ===== */
+const $ = id => document.getElementById(id);
+const app = $('app'), slideEl = $('slide');
+let S, muted = false, actx = null;
+
+function newState(){
+  return {stage:0, slide:0, visited:new Set([0]), procOpened:false,
+    found:{}, opened:{}, misses:0, q:null, allOpen:false,
+    sel:null, matched:{}, mErr:{}};
+}
+const count = o => ORDER.filter(f => o[f]).length;
+const isMobile = () => window.matchMedia('(max-width:759px)').matches;
+
+/* ===== צליל ===== */
+function note(f, t, d, v){
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t); o.stop(t + d + 0.02);
+}
+function snd(kind){
+  if (muted) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = actx || new AC();
+    if (actx.state === 'suspended') actx.resume();
+    const t = actx.currentTime;
+    if (kind === 'ok'){ note(660, t, 0.14, 0.07); note(880, t + 0.1, 0.2, 0.07); }
+    else note(196, t, 0.25, 0.06);
+  } catch (e) {}
+}
+function renderMute(){
+  $('mute').innerHTML = muted ? ICON_MUTED : ICON_SOUND;
+  $('mute').setAttribute('aria-label', muted ? 'הפעלת צלילים' : 'השתקת צלילים');
+}
+
+/* ===== תצוגה כללית ===== */
+function fb(){ return S.stage === 2 ? $('fb2') : $('fb'); }
+function say(html, scroll){
+  const el = fb();
+  el.innerHTML = '<div>' + html + '</div>';
+  el.scrollTop = 0;
+  if (scroll && isMobile()) el.scrollIntoView({block:'nearest'});
+}
+function updateBar(){
+  $('guide').textContent = GUIDES[S.stage];
+  const c = $('counter');
+  c.hidden = S.stage === 3;
+  if (S.stage === 0) c.textContent = 'שקפים: ' + S.visited.size + ' מתוך 7';
+  if (S.stage === 1) c.textContent = 'נמצאו ' + count(S.found) + ' מתוך 7';
+  if (S.stage === 2) c.textContent = 'הותאמו ' + count(S.matched) + ' מתוך 7';
+}
+function showStage(){
+  $('s01').hidden = S.stage > 1;
+  $('s2').hidden = S.stage !== 2;
+  $('s3').hidden = S.stage !== 3;
+  app.classList.toggle('st1', S.stage === 1);
+  updateBar();
+}
+
+/* ===== מציג המצגת ===== */
+function renderSlide(){
+  slideEl.innerHTML = slideHTML(S.slide);
+  slideEl.querySelectorAll('.zone').forEach(z => {
+    if (S.found[z.dataset.z]) z.classList.add('found');
+    if (S.stage === 1){ z.tabIndex = 0; z.setAttribute('role', 'button'); }
+  });
+  $('thumbs').querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('cur', i === S.slide));
+  $('prev').disabled = S.slide === 0;
+  $('next').disabled = S.slide === 6;
+}
+function buildThumbs(){
+  $('thumbs').innerHTML = SLIDES.map((s, i) =>
+    '<button class="thumb sl" type="button" data-i="' + i + '" aria-label="שקף ' + (i + 1) + '">' + slideHTML(i) + '</button>').join('');
+}
+function goSlide(i){
+  if (i < 0 || i > 6) return;
+  S.slide = i; S.visited.add(i);
+  renderSlide();
+  if (S.stage === 0){ renderIntro(); updateBar(); }
+  /* שאלה שכבר נענתה לא נשארת על המסך כשעוברים שקף */
+  if (S.stage === 1 && S.q && S.q.done && !S.allOpen) contSearch();
+}
+function renderChecklist(){
+  $('check').innerHTML = ORDER.map((f, i) => S.opened[f]
+    ? '<div class="row open">' + ICON_CHECK + '<span><b>' + (i + 1) + '. ' + FAULTS[f].checkName + '</b> - ' + FAULTS[f].checkQ + '</span></div>'
+    : '<div class="row">' + ICON_LOCK + '<span>' + (i + 1) + '. ?</span></div>').join('');
+}
+
+/* ===== שלב 0 ===== */
+function introReady(){ return S.procOpened && S.visited.size === 7; }
+function renderIntro(warn){
+  say('<p>רובי הכין את המצגת הזו בעזרת בינה מלאכותית. לפני שבודקים אותה, קראו את נוהל הפרסום של פולאריס, כדי לדעת מה אמור להופיע במצגת.</p>' +
+    '<ul class="status">' +
+    '<li class="' + (S.procOpened ? 'done' : '') + '">נוהל הפרסום: ' + (S.procOpened ? 'נקרא' : 'עוד לא נפתח') + '</li>' +
+    '<li class="' + (S.visited.size === 7 ? 'done' : '') + '">שקפים שעברתם עליהם: ' + S.visited.size + ' מתוך 7</li></ul>' +
+    (warn ? '<p class="note warnn">קודם קראו את נוהל הפרסום ועברו על כל השקפים. בלי לדעת מה אמור להופיע במצגת, אי אפשר לדעת מה לא בסדר.</p>' : '') +
+    '<button class="btn' + (introReady() ? '' : ' locked') + '" type="button" data-act="ready">אנחנו מוכנים לבדוק</button>');
+}
+function startSearch(){
+  S.stage = 1;
+  showStage(); renderSlide();
+  say('<p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר. אפשר לדפדף בין השקפים ולפתוח את הנוהל בכל רגע.</p>');
+}
+
+/* ===== שלב 1 ===== */
+function zoneClick(z){
+  if (S.stage !== 1 || S.allOpen) return;
+  if (S.q && !S.q.done){
+    /* שאלה פתוחה: חוזרים לשקף שלה ומזכירים לענות קודם */
+    S.q.nag = true;
+    if (S.slide !== FAULTS[S.q.f].slide - 1) goSlide(FAULTS[S.q.f].slide - 1);
+    renderQ();
+    return;
+  }
+  if (z === 'ok'){ miss(); return; }
+  if (S.found[z]){ say('<p>את התקלה הזו כבר מצאתם.</p>', true); return; }
+  S.found[z] = true; S.misses = 0;
+  snd('ok');
+  renderSlide(); updateBar();
+  const opts = FAULTS[z].options.map((t, i) => ({t:t, c:i === 0, tried:false}));
+  for (let i = opts.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [opts[i], opts[j]] = [opts[j], opts[i]];
+  }
+  S.q = {f:z, opts:opts, errs:0, done:false, note:''};
+  renderQ();
+}
+function miss(){
+  S.misses++;
+  snd('bad');
+  const nf = ORDER.find(f => !S.found[f]);
+  if (!nf) return;
+  if (S.misses === 1){
+    say('<p>האזור הזה תקין. המשיכו לחפש.</p><p class="note"><b>רמז:</b> ' + FAULTS[nf].searchHint + '</p>', true);
+    return;
+  }
+  goSlide(FAULTS[nf].slide - 1);
+  slideEl.querySelectorAll('.zone[data-z="' + nf + '"]').forEach(z => z.classList.add('blink'));
+  say('<p class="note warnn">הנה תקלה. לחצו עליה.</p>');
+  if (isMobile()) slideEl.scrollIntoView({block:'nearest'});
+}
+function renderQ(){
+  const q = S.q;
+  say('<p class="q-title">מה הבעיה כאן? <span class="q-tag">שקף ' + FAULTS[q.f].slide + '</span></p>' +
+    (q.nag && !q.done ? '<p class="note warnn">קודם ענו על השאלה על התקלה שסימנתם בשקף ' + FAULTS[q.f].slide + '.</p>' : '') +
+    q.opts.map((o, i) => '<button class="opt' + (o.tried ? ' dim' : '') + (q.done && o.c ? ' right' : '') + '" type="button" data-act="opt" data-i="' + i + '"' +
+      (o.tried || q.done ? ' disabled' : '') + '>' + o.t + '</button>').join('') +
+    q.note +
+    (q.done ? '<button class="btn" type="button" data-act="cont">' + (S.allOpen ? 'ממשיכים לשלב הבא' : 'ממשיכים לחפש') + '</button>' : ''), true);
+}
+function answer(i){
+  const q = S.q;
+  if (!q || q.done) return;
+  const o = q.opts[i], F = FAULTS[q.f];
+  q.nag = false;
+  if (o.c){
+    snd('ok');
+    q.note = '<p class="note okn"><b>נכון.</b> ' + F.explain + '</p>';
+    openRow();
+  } else {
+    snd('bad');
+    o.tried = true; q.errs++;
+    if (q.errs === 1) q.note = '<p class="note"><b>רמז:</b> ' + F.qHint + '</p>';
+    else { q.note = '<p class="note warnn"><b>התשובה:</b> ' + F.explain + '</p>'; openRow(); }
+  }
+  renderQ();
+}
+function openRow(){
+  S.q.done = true;
+  S.opened[S.q.f] = true;
+  S.allOpen = count(S.opened) === 7;
+  renderChecklist();
+}
+function contSearch(){
+  S.q = null;
+  if (S.allOpen){ startMatch(); return; }
+  say('<p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר.</p>');
+}
+
+/* ===== שלב 2 ===== */
+function startMatch(){
+  S.stage = 2;
+  showStage();
+  $('p2').textContent = PROMPT_TEXT;
+  renderMatch();
+  say('<p>בחרו תקלה מהרשימה, ואחר כך לחצו על השורה שהייתה חסרה בפרומפט של רובי.</p>');
+}
+function renderMatch(){
+  $('faults').innerHTML = ORDER.map((f, i) =>
+    '<button class="fault' + (S.matched[f] ? ' matched' : '') + (S.sel === f ? ' sel' : '') + '" type="button" data-f="' + f + '">' +
+    '<span class="chip">' + (i + 1) + '</span><span>' + FAULTS[f].short + '</span></button>').join('');
+  $('lines').innerHTML = LINES.map(l => {
+    const f = ORDER.find(x => S.matched[x] && FAULTS[x].line === l.id);
+    return '<button class="line' + (f ? ' used' : '') + '" type="button" data-l="' + l.id + '">' +
+      (f ? '<span class="chip">' + (ORDER.indexOf(f) + 1) + '</span>' : '') +
+      '<b>' + l.name + '</b>' + l.ex + '</button>';
+  }).join('');
+  updateBar();
+  requestAnimationFrame(drawLinks);
+}
+function drawLinks(){
+  const svg = $('links'), box = $('s2');
+  if (box.hidden){ svg.innerHTML = ''; return; }
+  const b = box.getBoundingClientRect();
+  let out = '';
+  ORDER.forEach(f => {
+    if (!S.matched[f]) return;
+    const a = box.querySelector('.fault[data-f="' + f + '"]'), c = box.querySelector('.line[data-l="' + FAULTS[f].line + '"]');
+    if (!a || !c) return;
+    const ra = a.getBoundingClientRect(), rc = c.getBoundingClientRect();
+    if (ra.right > rc.left) return; /* בטור אחד אין קווים, רק מספר וצבע */
+    out += '<line x1="' + (ra.right - b.left) + '" y1="' + (ra.top + ra.height / 2 - b.top) +
+      '" x2="' + (rc.left - b.left) + '" y2="' + (rc.top + rc.height / 2 - b.top) + '"/>';
+  });
+  svg.innerHTML = out;
+}
+function pickFault(f){
+  if (S.matched[f]) return;
+  S.sel = f;
+  renderMatch();
+  say('<p>עכשיו לחצו על השורה שהייתה חסרה בפרומפט של רובי.</p>');
+  if (isMobile()) $('lines').scrollIntoView({block:'nearest'});
+}
+function pickLine(id){
+  if (ORDER.some(f => S.matched[f] && FAULTS[f].line === id)) return;
+  if (!S.sel){ say('<p>קודם בחרו תקלה מהרשימה.</p>', true); return; }
+  const f = S.sel, F = FAULTS[f];
+  if (F.line === id){ doMatch(f, '<b>נכון.</b> ', 'okn'); snd('ok'); return; }
+  snd('bad');
+  S.mErr[f] = (S.mErr[f] || 0) + 1;
+  if (S.mErr[f] === 1){
+    S.sel = null;
+    renderMatch();
+    say('<p class="note"><b>רמז:</b> ' + F.mHint + '</p><p>בחרו שוב תקלה ונסו שורה אחרת.</p>', true);
+  } else doMatch(f, '<b>התשובה:</b> ', 'warnn');
+}
+function doMatch(f, prefix, cls){
+  S.matched[f] = true; S.sel = null;
+  renderMatch();
+  const line = LINES.find(l => l.id === FAULTS[f].line);
+  say('<p><b>' + FAULTS[f].short + '</b> ← <b>' + line.name + '</b></p>' +
+    '<p class="note ' + cls + '">' + prefix + FAULTS[f].mExplain + '</p>' +
+    (count(S.matched) === 7 ? '<button class="btn" type="button" data-act="end">למסך הסיום</button>' : ''), true);
+}
+
+/* ===== שלב 3 ===== */
+function finish(){
+  S.stage = 3;
+  showStage();
+  $('endCheck').innerHTML = ORDER.map((f, i) =>
+    '<div class="row">' + ICON_CHECK + '<span><b>' + (i + 1) + '. ' + FAULTS[f].checkName + '</b> - ' + FAULTS[f].checkQ + '</span></div>').join('');
+  $('six').innerHTML = LINES.filter(l => l.id !== 'none').map(l => '<li>' + l.name + '</li>').join('');
+  $('code').textContent = COMPLETION_CODE;
+  $('copy').textContent = 'העתקה';
+  $('s3').scrollTop = 0;
+  window.scrollTo(0, 0);
+  try { window.parent.postMessage({type:'polaris-complete', lesson:6, activity:'broken-deck'}, '*'); } catch (e) {}
+}
+async function copyCode(){
+  let ok = false;
+  try { await navigator.clipboard.writeText(COMPLETION_CODE); ok = true; }
+  catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = COMPLETION_CODE; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      ok = document.execCommand('copy'); ta.remove();
+    } catch (e2) {}
+  }
+  $('copy').textContent = ok ? 'הועתק' : 'סמנו את הקוד והעתיקו';
+}
+
+/* ===== חלונית ===== */
+function openModal(k){
+  $('modalBody').innerHTML = MODALS[k];
+  $('modal').hidden = false;
+  $('modalClose').focus();
+  if (k === 'proc' && !S.procOpened){ S.procOpened = true; if (S.stage === 0) renderIntro(); }
+}
+function closeModal(){ $('modal').hidden = true; }
+
+/* ===== אירועים ===== */
+slideEl.addEventListener('click', e => {
+  const z = e.target.closest('.zone');
+  if (z) zoneClick(z.dataset.z);
+});
+slideEl.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const z = e.target.closest('.zone');
+  if (z){ e.preventDefault(); zoneClick(z.dataset.z); }
+});
+slideEl.addEventListener('animationend', e => { if (e.target.classList) e.target.classList.remove('blink'); });
+$('thumbs').addEventListener('click', e => { const t = e.target.closest('.thumb'); if (t) goSlide(+t.dataset.i); });
+$('prev').addEventListener('click', () => goSlide(S.slide - 1));
+$('next').addEventListener('click', () => goSlide(S.slide + 1));
+document.querySelectorAll('[data-modal]').forEach(b => b.addEventListener('click', () => openModal(b.dataset.modal)));
+$('modalClose').addEventListener('click', closeModal);
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ closeModal(); return; }
+  /* עברית: חץ שמאלה מתקדם לשקף הבא, חץ ימינה חוזר לקודם */
+  if (S.stage > 1 || !$('modal').hidden) return;
+  if (e.key === 'ArrowLeft'){ e.preventDefault(); goSlide(S.slide + 1); }
+  else if (e.key === 'ArrowRight'){ e.preventDefault(); goSlide(S.slide - 1); }
+});
+function fbClick(e){
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'ready'){ if (introReady()) startSearch(); else { snd('bad'); renderIntro(true); } }
+  else if (a === 'opt') answer(+b.dataset.i);
+  else if (a === 'cont') contSearch();
+  else if (a === 'end') finish();
+}
+$('fb').addEventListener('click', fbClick);
+$('fb2').addEventListener('click', fbClick);
+$('faults').addEventListener('click', e => { const b = e.target.closest('.fault'); if (b) pickFault(b.dataset.f); });
+$('lines').addEventListener('click', e => { const b = e.target.closest('.line'); if (b) pickLine(b.dataset.l); });
+$('lines').addEventListener('scroll', drawLinks);
+window.addEventListener('resize', drawLinks);
+$('mute').addEventListener('click', () => { muted = !muted; renderMute(); });
+$('copy').addEventListener('click', copyCode);
+$('restart').addEventListener('click', init);
+
+function init(){
+  S = newState();
+  $('links').innerHTML = '';
+  closeModal();
+  showStage();
+  buildThumbs();
+  renderSlide();
+  renderChecklist();
+  renderIntro();
+  renderMute();
+}
+init();
+</script>
+</body>
+</html>
