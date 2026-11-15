@@ -167,8 +167,7 @@ p{margin:0 0 8px}
 .six{margin:0;padding:0;list-style:none}
 .six li{background:var(--accent-soft);border-radius:6px;padding:6px 10px;margin-top:5px;font-weight:bold;color:var(--slide-title)}
 .sum{color:var(--on-bg);font-weight:bold;font-size:17px;text-align:center;margin:12px 0 8px}
-.code-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;text-align:center}
-.code{font-size:30px;font-weight:bold;color:var(--slide-title);background:var(--accent-soft);border:2px dashed var(--accent);border-radius:10px;padding:4px 18px;user-select:all;-webkit-user-select:all}
+.code-box{text-align:center;font-size:16px;font-weight:bold}
 .end-foot{text-align:center;margin-top:10px}
 
 @media (max-width:759px){
@@ -241,12 +240,7 @@ p{margin:0 0 8px}
       <div class="card"><h3>שש השורות של הנחיה למצגת</h3><ul class="six" id="six"></ul></div>
     </div>
     <p class="sum">שש מתוך שבע התקלות נבעו מהפרומפט. את השביעית רק אדם יכול לעצור.</p>
-    <div class="card code-box">
-      <span>קוד הסיום שלכם:</span>
-      <span class="code" id="code" dir="rtl"></span>
-      <button class="btn" id="copy" type="button">העתקה</button>
-      <div style="flex-basis:100%">העתיקו את הקוד לשאלה שמתחת לסימולציה.</div>
-    </div>
+    <div class="card code-box">המשיכו לשאלה שמתחת לסימולציה.</div>
     <div class="end-foot"><button class="btn ghost" id="restart" type="button">להתחיל מחדש</button></div>
   </section>
 </div>
@@ -259,8 +253,6 @@ p{margin:0 0 8px}
 </div>
 
 <script>
-const COMPLETION_CODE = 'בודק-פולאריס';
-
 const PROMPT_TEXT = 'תכין מצגת על איך מעלים פוסט לעמוד של פולאריס, בשביל המתלמדים החדשים.';
 
 const MODALS = {
@@ -733,24 +725,9 @@ function finish(){
   showStage();
   $('endCheck').innerHTML = ORDER.map(rowHTML).join('');
   $('six').innerHTML = LINES.filter(l => l.id !== 'none').map(l => '<li>' + l.name + '</li>').join('');
-  $('code').textContent = COMPLETION_CODE;
-  $('copy').textContent = 'העתקה';
   $('s3').scrollTop = 0;
   window.scrollTo(0, 0);
   try { window.parent.postMessage({type:'polaris-complete', lesson:6, activity:'broken-deck'}, '*'); } catch (e) {}
-}
-async function copyCode(){
-  let ok = false;
-  try { await navigator.clipboard.writeText(COMPLETION_CODE); ok = true; }
-  catch (e) {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = COMPLETION_CODE; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      ok = document.execCommand('copy'); ta.remove();
-    } catch (e2) {}
-  }
-  $('copy').textContent = ok ? 'הועתק' : 'סמנו את הקוד והעתיקו';
 }
 
 /* ===== חלונית ===== */
@@ -806,7 +783,6 @@ $('lines').addEventListener('scroll', drawLinks);
 $('faults').addEventListener('scroll', drawLinks);
 window.addEventListener('resize', drawLinks);
 $('mute').addEventListener('click', () => { muted = !muted; renderMute(); });
-$('copy').addEventListener('click', copyCode);
 $('restart').addEventListener('click', init);
 
 function init(){
