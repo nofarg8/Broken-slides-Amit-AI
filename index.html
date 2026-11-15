@@ -356,7 +356,7 @@ const LINES = [
 ];
 
 const GUIDES = [
-  'לפני שבודקים, קראו את נוהל הפרסום ועברו על כל 7 השקפים.',
+  'לפני שבודקים, פתחו וקראו את נוהל הפרסום של פולאריס.',
   'במצגת של רובי מסתתרות 7 תקלות. מצאו לפחות 3. לחצו על המקום המדויק בשקף שבו משהו לא בסדר.',
   'לכל תקלה שמצאתם, מצאו את השורה שהייתה חסרה בפרומפט של רובי.',
   'סיימתם. עכשיו אתם יודעים מה בודקים במצגת, ומאיפה מגיעות התקלות.'
@@ -479,8 +479,7 @@ function say(html, scroll){
 function updateBar(){
   $('guide').textContent = GUIDES[S.stage];
   const c = $('counter');
-  c.hidden = S.stage === 3;
-  if (S.stage === 0) c.textContent = 'שקפים: ' + S.visited.size + ' מתוך 7';
+  c.hidden = S.stage === 3 || S.stage === 0;
   if (S.stage === 1) c.textContent = 'נמצאו ' + count(S.found) + ' מתוך 7 (כדי להמשיך: לפחות ' + MIN_FOUND + ')';
   if (S.stage === 2){
     const need = ORDER.filter(needsMatch);
@@ -532,14 +531,14 @@ function renderChecklist(){
 }
 
 /* ===== שלב 0 ===== */
-function introReady(){ return S.procOpened && S.visited.size === 7; }
+function introReady(){ return S.procOpened; }
 function renderIntro(warn){
   say('<p>רובי הכין את המצגת הזו בעזרת בינה מלאכותית. לפני שבודקים אותה, קראו את נוהל הפרסום של פולאריס, כדי לדעת מה אמור להופיע במצגת.</p>' +
     '<ul class="status">' +
     '<li class="' + (S.procOpened ? 'done' : '') + '">נוהל הפרסום: ' + (S.procOpened ? 'נקרא' : 'עוד לא נפתח') + '</li>' +
-    '<li class="' + (S.visited.size === 7 ? 'done' : '') + '">שקפים שעברתם עליהם: ' + S.visited.size + ' מתוך 7</li></ul>' +
-    (warn ? '<p class="note warnn">קודם קראו את נוהל הפרסום ועברו על כל השקפים. בלי לדעת מה אמור להופיע במצגת, אי אפשר לדעת מה לא בסדר.</p>'
-          : '<p>אחרי שתסיימו את שניהם, תוכלו להתחיל לחפש תקלות.</p>'));
+    '</ul>' +
+    (warn ? '<p class="note warnn">קודם פתחו וקראו את נוהל הפרסום. בלי לדעת מה אמור להופיע במצגת, אי אפשר לדעת מה לא בסדר.</p>'
+          : '<p>אחרי שתפתחו את הנוהל, תוכלו להתחיל לחפש תקלות.</p>'));
 }
 /* החיפוש מתחיל מעצמו כשהנוהל נקרא וכל השקפים נצפו */
 function checkIntro(){
@@ -551,7 +550,7 @@ function checkIntro(){
 function startSearch(){
   S.stage = 1;
   showStage(); renderSlide();
-  say('<p class="note okn">קראתם את הנוהל ועברתם על כל השקפים. עכשיו אפשר לחפש תקלות.</p><p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר. אפשר לדפדף בין השקפים ולפתוח את הנוהל בכל רגע.</p>');
+  say('<p class="note okn">פתחתם את נוהל הפרסום. עכשיו אפשר לחפש תקלות.</p><p>לחצו על המקום המדויק בשקף שבו משהו לא בסדר. אפשר לדפדף בין השקפים ולפתוח את הנוהל בכל רגע.</p>');
 }
 
 /* ===== שלב 1 ===== */
