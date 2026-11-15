@@ -210,13 +210,13 @@ p{margin:0 0 8px}
     </div>
     <div class="pane">
       <div class="card feedback" id="fb" aria-live="polite"></div>
+      <div class="docs">
+        <button class="btn ghost" id="procBtn" type="button" data-modal="proc">נוהל הפרסום של פולאריס</button>
+        <button class="btn ghost" type="button" data-modal="prompt">הפרומפט של רובי</button>
+      </div>
       <div class="card checklist">
         <h3>צ'קליסט הבדיקה</h3>
         <div id="check"></div>
-      </div>
-      <div class="docs">
-        <button class="btn ghost" type="button" data-modal="proc">נוהל הפרסום של פולאריס</button>
-        <button class="btn ghost" type="button" data-modal="prompt">הפרומפט של רובי</button>
       </div>
     </div>
   </section>
@@ -543,6 +543,8 @@ function renderIntro(warn){
 }
 /* החיפוש מתחיל מעצמו כשהנוהל נקרא וכל השקפים נצפו */
 function checkIntro(){
+  /* עד שהנוהל נפתח, הכפתור שלו מודגש */
+  $('procBtn').classList.toggle('ghost', S.procOpened);
   if (S.stage !== 0) return;
   if (introReady()) startSearch(); else { renderIntro(); updateBar(); }
 }
@@ -803,7 +805,7 @@ function init(){
   buildThumbs();
   renderSlide();
   renderChecklist();
-  renderIntro();
+  checkIntro();
   renderMute();
 }
 init();
